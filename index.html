@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#15161c">
+<title>Trade Replay — Avant / Après</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSy82kqhpDlfruvlhvBCseSSQAsn50-7ojs",
+  authDomain: "codex-trading-79e37.firebaseapp.com",
+  projectId: "codex-trading-79e37",
+  storageBucket: "codex-trading-79e37.firebasestorage.app",
+  messagingSenderId: "137129904768",
+  appId: "1:137129904768:web:80d85ef605195ce160b465",
+  measurementId: "G-7K9HXN76BG"
+};
+firebase.initializeApp(firebaseConfig);
+const fbDB = firebase.firestore();
+const fbUID = 'codex-user';
+</script>
+
+<style>
+:root{
+  --bg:#15161c;
+  --surface:#1d1f27;
+  --surface2:#242631;
+  --border:rgba(255,255,255,0.08);
+  --text:#eceef2;
+  --text-dim:rgba(236,238,242,0.55);
+  --text-faint:rgba(236,238,242,0.32);
+  --gold:#c9a24b;
+  --gold-dim:rgba(201,162,75,0.15);
+  --avant:#5b84a8;
+  --avant-dim:rgba(91,132,168,0.15);
+  --tp1:#4fae8c;
+  --tp1-dim:rgba(79,174,140,0.15);
+  --be:#8f97ad;
+  --be-dim:rgba(143,151,173,0.15);
+  --sl:#c9564f;
+  --sl-dim:rgba(201,86,79,0.15);
+  --apres:#c9773f;
+  --apres-dim:rgba(201,119,63,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:5px;}
+
+.mono{font-family:'JetBrains Mono',monospace;}
+
+/* ── TOPBAR ── */
+#topbar{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 26px;background:rgba(21,22,28,0.88);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+.tb-left{display:flex;align-items:center;gap:14px;min-width:0;}
+#back-btn{
+  display:none;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text-dim);cursor:pointer;font-size:1rem;flex-shrink:0;
+  transition:all 0.15s;
+}
+#back-btn:hover{border-color:var(--gold);color:var(--gold);}
+.tb-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-title .eyebrow{display:block;font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:2px;}
+#add-trade-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 18px;border-radius:8px;border:1px solid var(--gold);
+  background:var(--gold-dim);color:var(--gold);
+  font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.82rem;
+  cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;
+}
+#add-trade-btn:hover{background:var(--gold);color:#15161c;}
+
+/* ── HOME : TICKER BOARD ── */
+#view-home{max-width:980px;margin:0 auto;padding:48px 24px 80px;}
+.home-hero{margin-bottom:46px;}
+.home-hero h1{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;letter-spacing:-0.01em;margin-bottom:10px;}
+.home-hero p{color:var(--text-dim);font-size:0.92rem;max-width:520px;line-height:1.55;}
+.group{margin-bottom:34px;}
+.group-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;}
+.group-head .base{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:700;letter-spacing:0.04em;color:var(--text);}
+.group-head .rule{flex:1;height:1px;background:var(--border);}
+.chip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.pair-chip{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:all 0.15s;text-align:left;
+}
+.pair-chip:hover{border-color:var(--gold);background:var(--surface2);transform:translateY(-1px);}
+.pair-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pair-chip .code{font-family:'JetBrains Mono',monospace;font-size:0.86rem;font-weight:500;letter-spacing:0.01em;}
+.pair-chip .count{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-faint);}
+
+/* ── PAIR VIEW : FILMSTRIP TIMELINE ── */
+#view-pair{display:none;max-width:900px;margin:0 auto;padding:36px 24px 100px;}
+.pair-head{display:flex;align-items:center;gap:16px;margin-bottom:8px;}
+.pair-head .pdot{width:12px;height:12px;border-radius:50%;}
+.pair-head h1{font-family:'Space Grotesk',sans-serif;font-size:1.7rem;font-weight:700;}
+.pair-sub{color:var(--text-dim);font-size:0.84rem;margin:6px 0 38px;}
+
+.year-head{
+  display:flex;align-items:center;gap:14px;margin:38px 0 18px;
+}
+.year-head:first-of-type{margin-top:0;}
+.year-head .num{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;color:var(--gold);}
+.year-head .rule{flex:1;height:1px;background:var(--border);}
+.month-label{
+  font-family:'JetBrains Mono',monospace;font-size:0.66rem;font-weight:500;
+  letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint);
+  margin:20px 0 12px;
+}
+
+/* Frame = one trade record, styled like a film negative */
+.frame{
+  border:1px solid var(--border);border-radius:12px;background:var(--surface);
+  margin-bottom:18px;overflow:hidden;position:relative;
+}
+.frame-sprockets{display:flex;gap:5px;padding:7px 12px;background:var(--surface2);}
+.frame-sprockets span{width:6px;height:6px;border-radius:1px;background:rgba(255,255,255,0.12);}
+.frame-media{display:flex;}
+.frame-half{flex:1;min-width:0;position:relative;background:#0e0f13;}
+.frame-half img{width:100%;height:230px;object-fit:cover;display:block;cursor:zoom-in;background:#0e0f13;}
+.frame-tag{
+  position:absolute;top:10px;left:10px;z-index:2;
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:600;
+  letter-spacing:0.14em;text-transform:uppercase;padding:4px 9px;border-radius:20px;
+  backdrop-filter:blur(6px);
+}
+.frame-half.avant .frame-tag{background:var(--avant-dim);border:1px solid rgba(91,132,168,0.5);color:#8fb3d1;}
+.frame-half.apres .frame-tag{background:var(--apres-dim);border:1px solid rgba(201,119,63,0.5);color:#e0975f;}
+.frame-half.tp1 .frame-tag{background:var(--tp1-dim);border:1px solid rgba(79,174,140,0.5);color:#7ccbae;}
+.frame-half.tp1.empty{display:flex;align-items:center;justify-content:center;}
+.frame-half.tp1.empty img{display:none;}
+.frame-half.apres.empty{display:flex;align-items:center;justify-content:center;}
+.frame-half.apres.empty img{display:none;}
+.frame-half.empty .tp1-placeholder{color:var(--text-faint);font-size:0.68rem;text-align:center;padding:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;}
+.frame-split{
+  width:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);color:var(--gold);font-size:1rem;
+}
+.frame-meta{
+  display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid var(--border);
+}
+.frame-date{font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--text);}
+.frame-session{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:20px;
+  background:rgba(201,162,75,0.12);border:1px solid rgba(201,162,75,0.35);color:var(--gold);
+}
+.frame-status{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:20px;
+}
+.frame-status.st-ouvert{background:var(--surface2);border:1px solid var(--border);color:var(--text-faint);}
+.frame-status.st-tp1{background:var(--tp1-dim);border:1px solid rgba(79,174,140,0.5);color:#7ccbae;}
+.frame-status.st-be{background:var(--be-dim);border:1px solid rgba(143,151,173,0.5);color:#b3b9ca;}
+.frame-status.st-sl{background:var(--sl-dim);border:1px solid rgba(201,86,79,0.5);color:#e08882;}
+.frame-status.st-tpf{background:var(--gold-dim);border:1px solid rgba(201,162,75,0.5);color:var(--gold);}
+.frame-edit{
+  margin-left:auto;background:none;border:none;color:var(--text-faint);cursor:pointer;
+  font-size:0.85rem;padding:4px 8px;border-radius:6px;transition:all 0.15s;
+}
+.frame-edit:hover{color:var(--gold);background:var(--gold-dim);}
+.frame-del{
+  background:none;border:none;color:var(--text-faint);cursor:pointer;
+  font-size:0.85rem;padding:4px 8px;border-radius:6px;transition:all 0.15s;
+}
+.frame-del:hover{color:#e0776f;background:rgba(224,119,111,0.1);}
+
+.frame-durations{
+  display:flex;gap:10px;padding:0 16px 13px;flex-wrap:wrap;
+}
+.dur-chip{
+  display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-dim);
+}
+.dur-chip b{color:var(--text);font-weight:600;}
+.dur-chip.na{color:var(--text-faint);}
+
+.frame-comment{
+  margin:0 16px 16px;padding:12px 14px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--gold);
+  font-size:0.82rem;line-height:1.55;color:var(--text-dim);white-space:pre-wrap;
+}
+
+/* ── CALENDRIER ── */
+.cal-panel{margin-bottom:40px;}
+#cal-month{
+  width:100%;max-width:320px;padding:11px 14px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:0.85rem;margin-bottom:16px;cursor:pointer;
+}
+.cal-summary{
+  font-family:'JetBrains Mono',monospace;font-size:0.72rem;letter-spacing:0.04em;
+  color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;
+}
+.frame-pair{
+  display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.72rem;color:var(--text);
+  cursor:pointer;transition:all 0.15s;
+}
+.frame-pair:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── SETTINGS BTN ── */
+#settings-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text-dim);cursor:pointer;font-size:1rem;flex-shrink:0;
+  transition:all 0.15s;
+}
+#settings-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── CLOSES (POSITION & RÉSULTAT) ── */
+.close-row{
+  display:grid;grid-template-columns:1.1fr 1fr 0.8fr 0.9fr auto;gap:8px;align-items:center;
+  margin-bottom:8px;
+}
+.close-row select, .close-row input{
+  padding:9px 10px;border-radius:7px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.8rem;width:100%;
+}
+.close-pnl{
+  font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;text-align:right;
+  color:var(--text-faint);white-space:nowrap;
+}
+.close-pnl.pos{color:var(--tp1);}
+.close-pnl.neg{color:var(--sl);}
+.close-row .close-del{
+  background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:0.85rem;padding:4px 6px;
+}
+.close-row .close-del:hover{color:#e0776f;}
+.btn-add-close{
+  padding:8px 14px;border-radius:7px;border:1px dashed var(--border);background:none;
+  color:var(--text-dim);font-family:'Inter',sans-serif;font-size:0.78rem;cursor:pointer;transition:all 0.15s;
+}
+.btn-add-close:hover{border-color:var(--gold);color:var(--gold);}
+.closes-total{
+  margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-dim);
+}
+.closes-total b{color:var(--text);}
+
+/* ── PERFORMANCE PANEL (HOME) ── */
+.perf-panel{
+  display:flex;gap:12px;flex-wrap:wrap;margin-bottom:38px;padding:20px;
+  border-radius:14px;background:var(--surface);border:1px solid var(--border);
+}
+.perf-stat{flex:1;min-width:140px;}
+.perf-stat .pl{font-family:'JetBrains Mono',monospace;font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px;}
+.perf-stat .pv{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;}
+.perf-stat .pv.pos{color:var(--tp1);}
+.perf-stat .pv.neg{color:var(--sl);}
+.perf-progress{width:100%;margin-top:14px;}
+.perf-progress .bar-bg{height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;}
+.perf-progress .bar-fill{height:100%;background:var(--gold);border-radius:5px;transition:width 0.3s;}
+.perf-progress .bar-label{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-dim);margin-top:6px;}
+
+/* ── MONTHLY STATS (CALENDRIER) ── */
+.month-stats{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px;
+}
+.mstat{
+  padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border);
+}
+.mstat .ml{font-family:'JetBrains Mono',monospace;font-size:0.62rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:5px;}
+.mstat .mv{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;}
+.mstat .mv.pos{color:var(--tp1);}
+.mstat .mv.neg{color:var(--sl);}
+
+/* ── TYPE DE TRADE (Backtest / Réel) ── */
+.type-toggle{display:flex;gap:8px;}
+.field label.type-opt{
+  flex:1;position:relative;margin:0;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:500;color:var(--text-dim);
+}
+.type-opt input{position:absolute;opacity:0;pointer-events:none;}
+.type-opt span{
+  display:block;text-align:center;padding:11px 13px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface2);transition:all 0.15s;
+}
+.type-opt:hover span{border-color:rgba(255,255,255,0.2);}
+.type-opt input:focus-visible + span{outline:2px solid var(--gold);outline-offset:2px;}
+.type-opt.bt input:checked + span{background:var(--gold-dim);border-color:rgba(201,162,75,0.6);color:var(--gold);}
+.type-opt.reel input:checked + span{background:var(--tp1-dim);border-color:rgba(79,174,140,0.6);color:#7ccbae;}
+.type-opt.ote-conf input:checked + span{background:rgba(110,140,230,0.15);border-color:rgba(110,140,230,0.6);color:#a9b7f0;}
+.type-opt.ote-sans input:checked + span{background:rgba(214,140,80,0.15);border-color:rgba(214,140,80,0.6);color:#e6b48a;}
+.type-opt span{line-height:1.3;}
+@media(max-width:480px){.type-toggle{flex-direction:column;}}
+.frame-type{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:20px;
+}
+.frame-type.bt{background:var(--gold-dim);border:1px solid rgba(201,162,75,0.5);color:var(--gold);}
+.frame-type.reel{background:var(--tp1-dim);border:1px solid rgba(79,174,140,0.5);color:#7ccbae;}
+.frame-type.ote-conf{background:rgba(110,140,230,0.15);border:1px solid rgba(110,140,230,0.5);color:#a9b7f0;}
+.frame-type.ote-sans{background:rgba(214,140,80,0.15);border:1px solid rgba(214,140,80,0.5);color:#e6b48a;}
+.tf-sep{width:1px;background:var(--border);margin:0 4px;}
+.type-filter{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px;}
+.type-filter:empty{display:none;}
+.tf-btn{
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-dim);cursor:pointer;transition:all 0.15s;
+}
+.tf-btn:hover{border-color:var(--gold);color:var(--text);}
+.tf-btn.active{background:var(--gold-dim);border-color:rgba(201,162,75,0.6);color:var(--gold);}
+.tf-btn .n{opacity:0.6;margin-left:4px;}
+.frame-pnl{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.72rem;padding:4px 10px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+}
+.frame-pnl.pos{color:var(--tp1);border-color:rgba(79,174,140,0.4);}
+.frame-pnl.neg{color:var(--sl);border-color:rgba(201,86,79,0.4);}
+
+/* ── STATS PANEL ── */
+.stats-panel{
+  display:flex;gap:12px;margin-bottom:38px;flex-wrap:wrap;
+}
+.stat-card{
+  flex:1;min-width:150px;padding:16px 18px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.stat-card .stat-label{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;
+}
+.stat-card .stat-val{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;}
+.stat-card .stat-val .unit{font-size:0.85rem;font-weight:600;color:var(--text-dim);margin-left:3px;}
+.stat-card.tp1 .stat-val{color:#7ccbae;}
+.stat-card.tp2 .stat-val{color:var(--gold);}
+.pair-stats{
+  display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap;
+}
+.pair-stats .pstat{
+  padding:9px 15px;border-radius:9px;background:var(--surface);border:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-dim);
+}
+.pair-stats .pstat b{color:var(--text);}
+
+/* ── STATS ANNUELLES ── */
+.yearly-stats{display:flex;flex-direction:column;gap:14px;margin-bottom:40px;}
+.year-stat-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:18px 20px;}
+.year-stat-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+.year-stat-head .yr{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;color:var(--gold);}
+.year-stat-head .total{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-dim);}
+.year-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.year-metric{padding:10px 12px;border-radius:8px;background:var(--surface2);}
+.year-metric .ym-label{font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:5px;}
+.year-metric .ym-val{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;}
+.year-metric .ym-val .ym-pct{font-size:0.72rem;font-weight:600;color:var(--text-dim);margin-left:4px;}
+.year-metric.tpf .ym-val{color:var(--gold);}
+.year-metric.tp1 .ym-val{color:#7ccbae;}
+.year-metric.be .ym-val{color:#b3b9ca;}
+.year-metric.sl .ym-val{color:#e08882;}
+
+.empty-state{
+  text-align:center;padding:80px 20px;color:var(--text-faint);
+  font-size:0.88rem;line-height:1.6;
+}
+.empty-state .big{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;color:var(--text-dim);margin-bottom:8px;display:block;}
+
+/* ── MODAL : AJOUTER UN TRADE ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(10,10,14,0.7);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  width:100%;max-width:480px;max-height:88vh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  animation:modalIn 0.18s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(0.98);}to{opacity:1;transform:none;}}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);
+}
+.modal-head h2{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;line-height:1;}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:18px;}
+.field label{
+  display:block;font-family:'JetBrains Mono',monospace;font-size:0.66rem;font-weight:600;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;
+}
+.field select,.field input[type=date]{
+  width:100%;padding:11px 13px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;
+  outline:none;transition:border-color 0.15s;
+}
+.field select:focus,.field input[type=date]:focus{border-color:var(--gold);}
+.field select{cursor:pointer;}
+.status-grid{display:flex;flex-direction:column;gap:8px;}
+.status-row{display:flex;align-items:center;gap:12px;}
+.status-row input[type=date]{flex:1;}
+.status-tag{
+  width:66px;flex-shrink:0;text-align:center;padding:6px 0;border-radius:20px;
+  font-family:'JetBrains Mono',monospace;font-size:0.64rem;font-weight:700;letter-spacing:0.06em;
+}
+.status-tag.tp1{background:var(--tp1-dim);border:1px solid rgba(79,174,140,0.5);color:#7ccbae;}
+.status-tag.be{background:var(--be-dim);border:1px solid rgba(143,151,173,0.5);color:#b3b9ca;}
+.status-tag.sl{background:var(--sl-dim);border:1px solid rgba(201,86,79,0.5);color:#e08882;}
+.status-tag.tpf{background:var(--gold-dim);border:1px solid rgba(201,162,75,0.5);color:var(--gold);}
+.upload-row{display:flex;gap:12px;}
+.upload-box{flex:1;position:relative;}
+.upload-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;}
+.upload-box .dropzone{
+  height:120px;border:1.5px dashed var(--border);border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  color:var(--text-faint);font-size:0.72rem;text-align:center;padding:8px;transition:all 0.15s;
+  position:relative;overflow:hidden;
+}
+.upload-box .dropzone .ic{font-size:1.3rem;}
+.upload-box.avant .dropzone{border-color:rgba(91,132,168,0.35);}
+.upload-box.apres .dropzone{border-color:rgba(201,119,63,0.35);}
+.upload-box.filled .dropzone{border-style:solid;color:transparent;}
+.upload-box .dropzone img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;
+}
+.upload-box.filled .dropzone img{display:block;}
+.upload-box .cap{
+  display:block;text-align:center;margin-top:7px;font-family:'JetBrains Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);
+}
+.form-error{
+  font-size:0.8rem;color:#e0776f;background:rgba(224,119,111,0.08);border:1px solid rgba(224,119,111,0.3);
+  border-radius:8px;padding:10px 13px;display:none;
+}
+.form-error.show{display:block;}
+.btn-submit{
+  padding:13px;border-radius:9px;border:none;background:var(--gold);color:#15161c;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.88rem;cursor:pointer;
+  transition:all 0.15s;
+}
+.btn-submit:hover{filter:brightness(1.08);}
+.btn-submit:disabled{opacity:0.55;cursor:not-allowed;}
+.danger-zone{margin-top:6px;padding-top:18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;}
+.danger-zone p{font-size:0.78rem;line-height:1.5;color:var(--text-dim);}
+.btn-danger{
+  padding:12px;border-radius:9px;border:1px solid rgba(201,86,79,0.55);background:var(--sl-dim);color:#e08882;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.15s;
+}
+.btn-danger:hover{background:rgba(201,86,79,0.28);}
+.btn-danger:disabled{opacity:0.55;cursor:not-allowed;}
+
+/* ── LIGHTBOX ── */
+#lightbox{
+  display:none;position:fixed;inset:0;z-index:200;background:rgba(8,8,12,0.94);
+  align-items:center;justify-content:center;padding:30px;cursor:zoom-out;
+}
+#lightbox.open{display:flex;}
+#lightbox img{max-width:100%;max-height:90vh;border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+#lightbox-close{position:absolute;top:22px;right:26px;background:none;border:none;color:#fff;font-size:1.8rem;cursor:pointer;}
+
+@media(max-width:640px){
+  #topbar{padding:13px 16px;}
+  .tb-title{font-size:0.92rem;}
+  #add-trade-btn span.txt{display:none;}
+  #add-trade-btn{padding:10px 13px;}
+  .frame-media{flex-direction:column;}
+  .frame-split{width:100%;height:26px;}
+  .frame-half img{height:190px;}
+  .chip-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
+  .home-hero h1{font-size:1.5rem;}
+  .upload-row{flex-direction:column;}
+  .stats-panel{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tb-left">
+    <button id="back-btn" onclick="goHome()">←</button>
+    <div class="tb-title" id="tb-title"><span class="eyebrow">Trade Replay</span>Sélectionne une paire</div>
+  </div>
+  <div class="tb-right" style="display:flex;align-items:center;gap:10px;">
+    <button id="settings-btn" onclick="openSettings()" title="Paramètres">⚙</button>
+    <button id="add-trade-btn" onclick="openModal()">+ <span class="txt">Ajouter un trade</span></button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="view-home">
+  <div class="home-hero">
+    <h1>Archive avant / après</h1>
+    <p>Choisis une paire pour revoir chronologiquement chaque opportunité tradée depuis 2020 — capture avant l'entrée, capture au TP1, capture après la clôture.</p>
+  </div>
+  <div class="type-filter"></div>
+  <div class="stats-panel" id="global-stats"></div>
+  <div class="perf-panel" id="perf-panel"></div>
+  <div class="yearly-stats" id="yearly-stats"></div>
+
+  <div class="cal-panel">
+    <div class="group-head"><span class="base">Calendrier</span><div class="rule"></div></div>
+    <select id="cal-month" onchange="renderCalendarResults()">
+      <option value="">Sélectionner un mois...</option>
+    </select>
+    <div id="cal-results"></div>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+<!-- PAIR VIEW -->
+<div id="view-pair">
+  <div class="pair-head">
+    <div class="pdot" id="pair-dot"></div>
+    <h1 id="pair-title"></h1>
+  </div>
+  <div class="pair-sub" id="pair-sub"></div>
+  <div class="type-filter"></div>
+  <div class="pair-stats" id="pair-stats"></div>
+  <div id="timeline"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Ajouter un trade</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Paire de devises</label>
+        <select id="f-pair"></select>
+      </div>
+
+      <div class="field">
+        <label>Type de trade</label>
+        <div class="type-toggle" role="radiogroup" aria-label="Type de trade">
+          <label class="type-opt bt"><input type="radio" name="f-type" value="backtest"><span>Backtest</span></label>
+          <label class="type-opt reel"><input type="radio" name="f-type" value="reel"><span>Trade pris réellement</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Catégorie OTE</label>
+        <div class="type-toggle" role="radiogroup" aria-label="Catégorie OTE">
+          <label class="type-opt ote-conf"><input type="radio" name="f-ote" value="confirmation"><span>Réaction sur OTE avec confirmation</span></label>
+          <label class="type-opt ote-sans"><input type="radio" name="f-ote" value="sans_confirmation"><span>Réaction sur OTE sans confirmation</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Images du trade</label>
+        <div class="upload-row">
+          <div class="upload-box avant" id="box-avant">
+            <div class="dropzone">
+              <span class="ic">▲</span><span>Image avant</span>
+              <img id="preview-avant">
+            </div>
+            <input type="file" accept="image/*" id="f-avant" onchange="previewFile('avant', this)">
+            <span class="cap">Avant l'entrée</span>
+          </div>
+          <div class="upload-box tp1" id="box-tp1">
+            <div class="dropzone">
+              <span class="ic">●</span><span>Image TP1</span>
+              <img id="preview-tp1">
+            </div>
+            <input type="file" accept="image/*" id="f-tp1" onchange="previewFile('tp1', this)">
+            <span class="cap">Arrivée TP1 (optionnel)</span>
+          </div>
+          <div class="upload-box apres" id="box-apres">
+            <div class="dropzone">
+              <span class="ic">■</span><span>Image après</span>
+              <img id="preview-apres">
+            </div>
+            <input type="file" accept="image/*" id="f-apres" onchange="previewFile('apres', this)">
+            <span class="cap">Clôture (optionnel)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Date d'ouverture</label>
+        <input type="date" id="f-date-ouverture" min="2020-01-01" max="2099-12-31">
+      </div>
+
+      <div class="field">
+        <label>Statuts &amp; dates de suivi (à renseigner au fur et à mesure)</label>
+        <div class="status-grid">
+          <div class="status-row">
+            <span class="status-tag tp1">TP1</span>
+            <input type="date" id="f-date-tp1" min="2020-01-01" max="2099-12-31">
+          </div>
+          <div class="status-row">
+            <span class="status-tag be">BE</span>
+            <input type="date" id="f-date-be" min="2020-01-01" max="2099-12-31">
+          </div>
+          <div class="status-row">
+            <span class="status-tag sl">SL</span>
+            <input type="date" id="f-date-sl" min="2020-01-01" max="2099-12-31">
+          </div>
+          <div class="status-row">
+            <span class="status-tag tpf">TP final</span>
+            <input type="date" id="f-date-tp2" min="2020-01-01" max="2099-12-31">
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Position &amp; résultat</label>
+        <div id="closes-list"></div>
+        <button type="button" class="btn-add-close" onclick="addCloseRow()">+ Ajouter une clôture</button>
+        <div class="closes-total">Résultat total du trade : <b id="closes-total-val">0 $</b></div>
+      </div>
+
+      <div class="field">
+        <label>Session de trading</label>
+        <select id="f-session">
+          <option value="">Sélectionner...</option>
+          <option value="asie">Asie</option>
+          <option value="londres">Londres</option>
+          <option value="ny">New York</option>
+          <option value="overlap">Chevauchement Londres-NY</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Commentaire (optionnel)</label>
+        <textarea id="f-comment" rows="4" placeholder="Ton analyse, le raisonnement du trade, ce que tu retiens..." style="width:100%;resize:vertical;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.85rem;padding:10px 12px;"></textarea>
+      </div>
+
+      <div class="form-error" id="form-error"></div>
+      <button class="btn-submit" id="submit-btn" onclick="submitTrade()">Enregistrer le trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-overlay" onclick="if(event.target===this) closeSettings()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Paramètres du compte</h2>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Capital de départ ($)</label>
+        <input type="number" id="s-capital" step="0.01" placeholder="ex: 1000">
+      </div>
+      <div class="field">
+        <label>Objectif ($) — optionnel</label>
+        <input type="number" id="s-objectif" step="0.01" placeholder="ex: 5000">
+      </div>
+      <div class="form-error" id="settings-error"></div>
+      <button class="btn-submit" onclick="saveSettings()">Enregistrer</button>
+
+      <div class="danger-zone">
+        <p>Repartir de zéro : supprime définitivement tous les trades et toutes leurs images. Le capital de départ et l'objectif sont conservés.</p>
+        <button class="btn-danger" id="reset-btn" onclick="resetJournal()">Réinitialiser le journal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="lbClose()">
+  <button id="lightbox-close" onclick="lbClose()">×</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+const BLANK = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4=';
+
+// ══════════════════════════════════════════
+//  CONFIG — PAIRES (identiques au Journal Trading)
+// ══════════════════════════════════════════
+const GROUPES = [
+  {id:'aud', label:'AUD', pairs:[
+    {id:'aud-usd', label:'AUD/USD', dot:'#eceef2'},
+    {id:'aud-sgd', label:'AUD/SGD', dot:'#e07ba0'},
+    {id:'aud-jpy', label:'AUD/JPY', dot:'#e0a458'},
+    {id:'aud-cad', label:'AUD/CAD', dot:'#6fa8dc'},
+    {id:'aud-chf', label:'AUD/CHF', dot:'#7fd1ae'},
+  ]},
+  {id:'eur', label:'EUR', pairs:[
+    {id:'eur-usd', label:'EUR/USD', dot:'#eceef2'},
+    {id:'eur-sgd', label:'EUR/SGD', dot:'#e07ba0'},
+    {id:'eur-jpy', label:'EUR/JPY', dot:'#e0a458'},
+    {id:'eur-cad', label:'EUR/CAD', dot:'#6fa8dc'},
+    {id:'eur-chf', label:'EUR/CHF', dot:'#7fd1ae'},
+  ]},
+  {id:'gbp', label:'GBP', pairs:[
+    {id:'gbp-usd', label:'GBP/USD', dot:'#eceef2'},
+    {id:'gbp-sgd', label:'GBP/SGD', dot:'#e07ba0'},
+    {id:'gbp-jpy', label:'GBP/JPY', dot:'#e0a458'},
+    {id:'gbp-cad', label:'GBP/CAD', dot:'#6fa8dc'},
+    {id:'gbp-chf', label:'GBP/CHF', dot:'#7fd1ae'},
+  ]},
+  {id:'nzd', label:'NZD', pairs:[
+    {id:'nzd-usd', label:'NZD/USD', dot:'#eceef2'},
+    {id:'nzd-sgd', label:'NZD/SGD', dot:'#e07ba0'},
+    {id:'nzd-jpy', label:'NZD/JPY', dot:'#e0a458'},
+    {id:'nzd-cad', label:'NZD/CAD', dot:'#6fa8dc'},
+    {id:'nzd-chf', label:'NZD/CHF', dot:'#7fd1ae'},
+  ]},
+];
+const PAIR_MAP = {};
+GROUPES.forEach(g => g.pairs.forEach(p => PAIR_MAP[p.id] = p));
+
+const SESSION_LABELS = {
+  asie:'Asie', londres:'Londres', ny:'New York', overlap:'Chevauchement Londres-NY'
+};
+
+const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+// ══════════════════════════════════════════
+//  ÉTAT
+// ══════════════════════════════════════════
+let currentPair = null;
+let _allTrades = [];        // [{id, pairId, pairLabel, dateISO, dateTP1, dateBE, dateSL, dateTP2, session, tradeType, oteType, closes, totalPnl}]
+const _imgCache = {};       // key(tradeId+'-avant'/'-tp1'/'-apres') -> base64 url
+let _editingTradeId = null;
+let _settings = { capital: null, objectif: null };
+let _typeFilter = 'all';    // 'all' | 'backtest' | 'reel'
+let _oteFilter = 'all';     // 'all' | 'confirmation' | 'sans_confirmation'
+
+const OTE_LABELS = {
+  confirmation: 'OTE avec confirmation',
+  sans_confirmation: 'OTE sans confirmation'
+};
+// Les trades enregistrés avant l'ajout de ce champ n'ont pas de catégorie OTE (null).
+function normOte(v) { return OTE_LABELS[v] ? v : null; }
+
+const TYPE_LABELS = { backtest:'Backtest', reel:'Réel' };
+
+// Les trades enregistrés avant l'ajout de ce champ sont considérés comme des backtests.
+function normType(v) { return v === 'reel' ? 'reel' : 'backtest'; }
+
+function visibleTrades() {
+  return _allTrades.filter(t =>
+    (_typeFilter === 'all' || t.tradeType === _typeFilter) &&
+    (_oteFilter === 'all' || t.oteType === _oteFilter)
+  );
+}
+
+function renderTypeFilters() {
+  const byType = _typeFilter === 'all' ? _allTrades : _allTrades.filter(t => t.tradeType === _typeFilter);
+  const nBt = _allTrades.filter(t => t.tradeType === 'backtest').length;
+  const nReel = _allTrades.filter(t => t.tradeType === 'reel').length;
+  const nConf = byType.filter(t => t.oteType === 'confirmation').length;
+  const nSans = byType.filter(t => t.oteType === 'sans_confirmation').length;
+  const btn = (fn, cur, val, label, n) =>
+    '<button type="button" class="tf-btn' + (cur === val ? ' active' : '') + '" onclick="' + fn + '(\'' + val + '\')">'
+    + label + '<span class="n">' + n + '</span></button>';
+  const html = _allTrades.length
+    ? btn('setTypeFilter', _typeFilter, 'all', 'Tous', _allTrades.length)
+      + btn('setTypeFilter', _typeFilter, 'backtest', 'Backtests', nBt)
+      + btn('setTypeFilter', _typeFilter, 'reel', 'Trades réels', nReel)
+      + '<span class="tf-sep"></span>'
+      + btn('setOteFilter', _oteFilter, 'all', 'Toutes catégories', byType.length)
+      + btn('setOteFilter', _oteFilter, 'confirmation', 'OTE avec confirmation', nConf)
+      + btn('setOteFilter', _oteFilter, 'sans_confirmation', 'OTE sans confirmation', nSans)
+    : '';
+  document.querySelectorAll('.type-filter').forEach(el => { el.innerHTML = html; });
+}
+
+function refreshAllViews() {
+  renderTypeFilters();
+  if (currentPair) renderTimeline(currentPair);
+  renderGroups();
+  renderGlobalStats();
+  renderYearlyStats();
+  renderCalendar();
+  renderPerfPanel();
+}
+
+function setTypeFilter(v) { _typeFilter = v; refreshAllViews(); }
+function setOteFilter(v) { _oteFilter = v; refreshAllViews(); }
+
+// ══════════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════════
+function tradesCol() { return fbDB.collection('users').doc(fbUID).collection('trades'); }
+function imagesCol() { return fbDB.collection('users').doc(fbUID).collection('trades_images'); }
+function settingsDoc() { return fbDB.collection('users').doc(fbUID).collection('meta').doc('settings'); }
+
+function listenSettings() {
+  settingsDoc().onSnapshot(doc => {
+    const data = doc.data() || {};
+    _settings.capital = (typeof data.capital === 'number') ? data.capital : null;
+    _settings.objectif = (typeof data.objectif === 'number') ? data.objectif : null;
+    if (!currentPair) renderPerfPanel();
+  });
+}
+
+function listenTrades() {
+  tradesCol().onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+      const id = change.doc.id;
+      if (change.type === 'removed') {
+        _allTrades = _allTrades.filter(t => t.id !== id);
+        return;
+      }
+      const data = change.doc.data();
+      const idx = _allTrades.findIndex(t => t.id === id);
+      const closes = Array.isArray(data.closes) ? data.closes : [];
+      const entry = {
+        id, pairId: data.pairId, pairLabel: data.pairLabel,
+        dateISO: data.dateISO,
+        dateTP1: data.dateTP1 || null, dateBE: data.dateBE || null,
+        dateSL: data.dateSL || null, dateTP2: data.dateTP2 || null,
+        session: data.session,
+        tradeType: normType(data.tradeType),
+        oteType: normOte(data.oteType),
+        comment: data.comment || null,
+        closes,
+        totalPnl: typeof data.totalPnl === 'number' ? data.totalPnl : closes.reduce((s,c) => s + (c.pnl || 0), 0)
+      };
+      if (idx >= 0) _allTrades[idx] = entry; else _allTrades.push(entry);
+    });
+    renderTypeFilters();
+    if (currentPair) renderTimeline(currentPair);
+    renderGroups();
+    if (!currentPair) renderGlobalStats();
+    if (!currentPair) renderYearlyStats();
+    if (!currentPair) renderCalendar();
+    if (!currentPair) renderPerfPanel();
+  });
+}
+
+function listenImages() {
+  imagesCol().onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+      const key = change.doc.id;
+      if (change.type === 'removed') { delete _imgCache[key]; applyImg(key, null); return; }
+      const data = change.doc.data();
+      _imgCache[key] = data.url || null;
+      applyImg(key, data.url || null);
+    });
+  });
+}
+
+function applyImg(key, url) {
+  const el = document.getElementById('img-' + key);
+  if (el) el.src = url || BLANK;
+}
+
+async function saveImageDoc(key, b64) {
+  await imagesCol().doc(key).set({ url: b64, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+async function deleteImageDoc(key) {
+  await imagesCol().doc(key).delete().catch(()=>{});
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function renderGroups() {
+  const el = document.getElementById('groups');
+  el.innerHTML = GROUPES.map(g => {
+    const chips = g.pairs.map(p => {
+      const count = visibleTrades().filter(t => t.pairId === p.id).length;
+      return '<button class="pair-chip" onclick="selectPair(\'' + p.id + '\')">'
+        + '<span class="pair-dot" style="background:' + p.dot + '"></span>'
+        + '<span class="code">' + p.label + '</span>'
+        + '<span class="count">' + count + '</span>'
+        + '</button>';
+    }).join('');
+    return '<div class="group"><div class="group-head"><span class="base">' + g.label + '</span><div class="rule"></div></div>'
+      + '<div class="chip-grid">' + chips + '</div></div>';
+  }).join('');
+}
+
+function selectPair(pairId) {
+  currentPair = pairId;
+  const p = PAIR_MAP[pairId];
+  document.getElementById('view-home').style.display = 'none';
+  document.getElementById('view-pair').style.display = 'block';
+  document.getElementById('back-btn').style.display = 'flex';
+  document.getElementById('tb-title').innerHTML = '<span class="eyebrow">Trade Replay</span>' + p.label;
+  document.getElementById('pair-dot').style.background = p.dot;
+  document.getElementById('pair-title').textContent = p.label;
+  renderTimeline(pairId);
+  window.scrollTo({top:0});
+}
+
+function goHome() {
+  currentPair = null;
+  document.getElementById('view-home').style.display = 'block';
+  document.getElementById('view-pair').style.display = 'none';
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('tb-title').innerHTML = '<span class="eyebrow">Trade Replay</span>Sélectionne une paire';
+  renderGroups();
+  renderGlobalStats();
+  renderYearlyStats();
+  renderCalendar();
+  renderPerfPanel();
+  window.scrollTo({top:0});
+}
+
+// ══════════════════════════════════════════
+//  DURÉES & STATISTIQUES
+// ══════════════════════════════════════════
+function daysBetween(isoStart, isoEnd) {
+  if (!isoStart || !isoEnd) return null;
+  const d1 = new Date(isoStart + 'T00:00:00');
+  const d2 = new Date(isoEnd + 'T00:00:00');
+  return Math.round((d2 - d1) / 86400000);
+}
+
+function computeStats(list) {
+  const tp1Durations = [];
+  const tp2Durations = [];
+  list.forEach(t => {
+    const d1 = daysBetween(t.dateISO, t.dateTP1);
+    if (d1 !== null && d1 >= 0) tp1Durations.push(d1);
+    const d2 = daysBetween(t.dateISO, t.dateTP2);
+    if (d2 !== null && d2 >= 0) tp2Durations.push(d2);
+  });
+  const avg = arr => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length) : null;
+  return {
+    count: list.length,
+    countTP1: tp1Durations.length,
+    countTP2: tp2Durations.length,
+    avgTP1: avg(tp1Durations),
+    avgTP2: avg(tp2Durations)
+  };
+}
+
+function fmtAvg(v) {
+  return v === null ? '—' : (Math.round(v * 10) / 10).toString();
+}
+
+function renderGlobalStats() {
+  const el = document.getElementById('global-stats');
+  const s = computeStats(visibleTrades());
+  if (!s.count) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-label">Trades enregistrés</div><div class="stat-val">' + s.count + '</div></div>'
+    + '<div class="stat-card tp1"><div class="stat-label">Durée moy. vers TP1</div><div class="stat-val">' + fmtAvg(s.avgTP1) + '<span class="unit">j (' + s.countTP1 + ')</span></div></div>'
+    + '<div class="stat-card tp2"><div class="stat-label">Durée moy. vers TP final</div><div class="stat-val">' + fmtAvg(s.avgTP2) + '<span class="unit">j (' + s.countTP2 + ')</span></div></div>';
+}
+
+function computeYearlyStats(list) {
+  const byYear = {};
+  list.forEach(t => {
+    const year = t.dateISO.split('-')[0];
+    if (!byYear[year]) byYear[year] = [];
+    byYear[year].push(t);
+  });
+  const years = Object.keys(byYear).sort((a,b) => b.localeCompare(a));
+  return years.map(year => {
+    const yl = byYear[year];
+    const total = yl.length;
+    const tpFinal = yl.filter(t => t.dateTP2).length;
+    const tp1 = yl.filter(t => t.dateTP1).length;
+    const be = yl.filter(t => t.dateBE).length;
+    const sl = yl.filter(t => t.dateSL).length;
+    const pct = n => total ? Math.round(n / total * 100) : 0;
+    return {
+      year, total, tpFinal, tp1, be, sl,
+      pctTpFinal: pct(tpFinal), pctTp1: pct(tp1), pctBE: pct(be), pctSL: pct(sl)
+    };
+  });
+}
+
+function renderYearlyStats() {
+  const el = document.getElementById('yearly-stats');
+  const stats = computeYearlyStats(visibleTrades());
+  if (!stats.length) { el.innerHTML = ''; return; }
+  el.innerHTML = stats.map(s =>
+    '<div class="year-stat-card">'
+    + '<div class="year-stat-head"><span class="yr">' + s.year + '</span><span class="total">' + s.total + ' trade' + (s.total>1?'s':'') + '</span></div>'
+    + '<div class="year-metric-grid">'
+    + '<div class="year-metric tpf"><div class="ym-label">TP Final</div><div class="ym-val">' + s.tpFinal + '<span class="ym-pct">' + s.pctTpFinal + '%</span></div></div>'
+    + '<div class="year-metric tp1"><div class="ym-label">TP1 atteint</div><div class="ym-val">' + s.tp1 + '<span class="ym-pct">' + s.pctTp1 + '%</span></div></div>'
+    + '<div class="year-metric be"><div class="ym-label">BE</div><div class="ym-val">' + s.be + '<span class="ym-pct">' + s.pctBE + '%</span></div></div>'
+    + '<div class="year-metric sl"><div class="ym-label">SL</div><div class="ym-val">' + s.sl + '<span class="ym-pct">' + s.pctSL + '%</span></div></div>'
+    + '</div>'
+    + '</div>'
+  ).join('');
+}
+
+function renderPairStats(list) {
+  const el = document.getElementById('pair-stats');
+  const s = computeStats(list);
+  if (!s.count) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<div class="pstat">TP1 moyen : <b>' + fmtAvg(s.avgTP1) + ' j</b> (' + s.countTP1 + ' trade' + (s.countTP1>1?'s':'') + ')</div>'
+    + '<div class="pstat">TP final moyen : <b>' + fmtAvg(s.avgTP2) + ' j</b> (' + s.countTP2 + ' trade' + (s.countTP2>1?'s':'') + ')</div>';
+}
+
+function fmtDate(iso) {
+  const [y,m,d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+function tradeStatus(t) {
+  if (t.dateSL)  return {code:'sl',    label:'SL'};
+  if (t.dateTP2) return {code:'tpf',   label:'TP Final'};
+  if (t.dateBE)  return {code:'be',    label:'BE'};
+  if (t.dateTP1) return {code:'tp1',   label:'TP1'};
+  return {code:'ouvert', label:'Ouvert'};
+}
+
+function buildFrame(t, showPair) {
+  const kAvant = t.id + '-avant', kTp1 = t.id + '-tp1', kApres = t.id + '-apres';
+  const tp1Url = _imgCache[kTp1];
+  const apresUrl = _imgCache[kApres];
+  const tp1Half = tp1Url
+    ? '<div class="frame-half tp1"><span class="frame-tag">TP1</span><img id="img-' + kTp1 + '" src="' + tp1Url + '" onclick="lbOpen(this.src)"></div>'
+    : '<div class="frame-half tp1 empty"><span class="frame-tag">TP1</span><span class="tp1-placeholder">Non atteint</span></div>';
+  const apresHalf = apresUrl
+    ? '<div class="frame-half apres"><span class="frame-tag">Après</span><img id="img-' + kApres + '" src="' + apresUrl + '" onclick="lbOpen(this.src)"></div>'
+    : '<div class="frame-half apres empty"><span class="frame-tag">Après</span><span class="tp1-placeholder">Position en cours</span></div>';
+  const d1 = daysBetween(t.dateISO, t.dateTP1);
+  const dBE = daysBetween(t.dateISO, t.dateBE);
+  const dSL = daysBetween(t.dateISO, t.dateSL);
+  const d2 = daysBetween(t.dateISO, t.dateTP2);
+  const st = tradeStatus(t);
+  const p = PAIR_MAP[t.pairId];
+  const pairBadge = showPair && p
+    ? '<span class="frame-pair" onclick="selectPair(\'' + t.pairId + '\')"><span class="pair-dot" style="background:' + p.dot + '"></span>' + p.label + '</span>'
+    : '';
+  const totalPnl = t.totalPnl || 0;
+  const pnlBadge = (t.closes && t.closes.length)
+    ? '<span class="frame-pnl' + (totalPnl>0?' pos':totalPnl<0?' neg':'') + '">' + fmtMoney(totalPnl) + '</span>'
+    : '';
+  return '<div class="frame">'
+    + '<div class="frame-sprockets">' + '<span></span>'.repeat(14) + '</div>'
+    + '<div class="frame-media">'
+    + '<div class="frame-half avant"><span class="frame-tag">Avant</span><img id="img-' + kAvant + '" src="' + (_imgCache[kAvant] || BLANK) + '" onclick="lbOpen(this.src)"></div>'
+    + '<div class="frame-split">→</div>'
+    + tp1Half
+    + '<div class="frame-split">→</div>'
+    + apresHalf
+    + '</div>'
+    + '<div class="frame-meta">'
+    + pairBadge
+    + '<span class="frame-date mono">' + fmtDate(t.dateISO) + '</span>'
+    + '<span class="frame-session">' + (SESSION_LABELS[t.session] || t.session) + '</span>'
+    + '<span class="frame-type ' + (t.tradeType === 'reel' ? 'reel' : 'bt') + '">' + TYPE_LABELS[t.tradeType === 'reel' ? 'reel' : 'backtest'] + '</span>'
+    + (t.oteType ? '<span class="frame-type ' + (t.oteType === 'confirmation' ? 'ote-conf' : 'ote-sans') + '">' + OTE_LABELS[t.oteType] + '</span>' : '')
+    + '<span class="frame-status st-' + st.code + '">' + st.label + '</span>'
+    + pnlBadge
+    + '<button class="frame-edit" onclick="openModal(\'' + t.id + '\')" title="Modifier">✎</button>'
+    + '<button class="frame-del" onclick="deleteTrade(\'' + t.id + '\')" title="Supprimer">🗑</button>'
+    + '</div>'
+    + '<div class="frame-durations">'
+    + '<div class="dur-chip' + (d1===null?' na':'') + '">TP1 : <b>' + (d1===null?'—':d1+' j') + '</b></div>'
+    + '<div class="dur-chip' + (dBE===null?' na':'') + '">BE : <b>' + (dBE===null?'—':dBE+' j') + '</b></div>'
+    + '<div class="dur-chip' + (dSL===null?' na':'') + '">SL : <b>' + (dSL===null?'—':dSL+' j') + '</b></div>'
+    + '<div class="dur-chip' + (d2===null?' na':'') + '">TP final : <b>' + (d2===null?'—':d2+' j') + '</b></div>'
+    + '</div>'
+    + (t.comment ? '<div class="frame-comment">' + t.comment.replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div>' : '')
+    + '</div>';
+}
+
+function renderTimeline(pairId) {
+  const list = visibleTrades().filter(t => t.pairId === pairId).slice().sort((a,b) => b.dateISO.localeCompare(a.dateISO));
+  const p = PAIR_MAP[pairId];
+  document.getElementById('pair-sub').textContent = list.length
+    ? list.length + ' trade' + (list.length > 1 ? 's' : '') + ' enregistré' + (list.length > 1 ? 's' : '')
+    : 'Aucun trade enregistré pour l\'instant';
+  renderPairStats(list);
+
+  const el = document.getElementById('timeline');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><span class="big">Aucune opportunité archivée</span>Clique sur « Ajouter un trade » pour enregistrer ta première capture avant / TP1 / après sur ' + p.label + '.</div>';
+    return;
+  }
+
+  let html = '';
+  let curYear = null, curMonth = null;
+  list.forEach(t => {
+    const [y, m] = t.dateISO.split('-');
+    if (y !== curYear) {
+      html += '<div class="year-head"><span class="num">' + y + '</span><div class="rule"></div></div>';
+      curYear = y; curMonth = null;
+    }
+    if (m !== curMonth) {
+      html += '<div class="month-label">' + MOIS_LABELS[parseInt(m,10)-1] + '</div>';
+      curMonth = m;
+    }
+    html += buildFrame(t, false);
+  });
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+//  CALENDRIER — VUE PAR MOIS
+// ══════════════════════════════════════════
+function renderCalendar() {
+  const sel = document.getElementById('cal-month');
+  if (!sel) return;
+  const months = Array.from(new Set(visibleTrades().map(t => t.dateISO.slice(0,7)))).sort((a,b) => b.localeCompare(a));
+  const prevVal = sel.value;
+  sel.innerHTML = '<option value="">Sélectionner un mois...</option>' + months.map(mKey => {
+    const [y, m] = mKey.split('-');
+    return '<option value="' + mKey + '">' + MOIS_LABELS[parseInt(m,10)-1] + ' ' + y + '</option>';
+  }).join('');
+  if (prevVal && months.includes(prevVal)) sel.value = prevVal;
+  renderCalendarResults();
+}
+
+function computeMonthlyStats(list) {
+  const count = list.length;
+  const hasType = (t, type) => (t.closes || []).some(c => c.type === type);
+  const tp1Count = list.filter(t => hasType(t,'tp1')).length;
+  const tp2Count = list.filter(t => hasType(t,'tp2')).length;
+  const slCount = list.filter(t => hasType(t,'sl')).length;
+  const rrValues = [];
+  let totalGain = 0, totalLoss = 0;
+  list.forEach(t => (t.closes || []).forEach(c => {
+    if ((c.type === 'tp1' || c.type === 'tp2') && typeof c.rr === 'number' && !isNaN(c.rr)) rrValues.push(c.rr);
+    if (typeof c.pnl === 'number') { if (c.pnl > 0) totalGain += c.pnl; else if (c.pnl < 0) totalLoss += c.pnl; }
+  }));
+  const avgRR = rrValues.length ? (rrValues.reduce((a,b)=>a+b,0) / rrValues.length) : null;
+  const net = totalGain + totalLoss;
+  return { count, tp1Count, tp2Count, slCount, avgRR, totalGain, totalLoss, net };
+}
+
+function renderCalendarResults() {
+  const sel = document.getElementById('cal-month');
+  const el = document.getElementById('cal-results');
+  if (!sel || !el) return;
+  const mKey = sel.value;
+  if (!mKey) { el.innerHTML = ''; return; }
+  const list = visibleTrades().filter(t => t.dateISO.slice(0,7) === mKey).slice().sort((a,b) => b.dateISO.localeCompare(a.dateISO));
+  const [y, m] = mKey.split('-');
+  const label = MOIS_LABELS[parseInt(m,10)-1] + ' ' + y;
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><span class="big">Aucun trade en ' + label + '</span>Aucune opportunité enregistrée sur cette période.</div>';
+    return;
+  }
+  const s = computeMonthlyStats(list);
+  const statsHtml = '<div class="month-stats">'
+    + '<div class="mstat"><div class="ml">Trades pris</div><div class="mv">' + s.count + '</div></div>'
+    + '<div class="mstat"><div class="ml">TP1 atteints</div><div class="mv">' + s.tp1Count + '</div></div>'
+    + '<div class="mstat"><div class="ml">TP finaux atteints</div><div class="mv">' + s.tp2Count + '</div></div>'
+    + '<div class="mstat"><div class="ml">Stop Loss</div><div class="mv">' + s.slCount + '</div></div>'
+    + '<div class="mstat"><div class="ml">R:R moyen</div><div class="mv">' + (s.avgRR===null ? '—' : '1:' + s.avgRR.toFixed(1)) + '</div></div>'
+    + '<div class="mstat"><div class="ml">Bénéfice total</div><div class="mv pos">' + fmtMoney(s.totalGain) + '</div></div>'
+    + '<div class="mstat"><div class="ml">Perte totale</div><div class="mv neg">' + fmtMoney(s.totalLoss) + '</div></div>'
+    + '<div class="mstat"><div class="ml">Résultat net</div><div class="mv ' + (s.net>0?'pos':s.net<0?'neg':'') + '">' + fmtMoney(s.net) + '</div></div>'
+    + '</div>';
+  el.innerHTML = statsHtml + '<div class="cal-summary">' + list.length + ' trade' + (list.length>1?'s':'') + ' en ' + label + '</div>'
+    + list.map(t => buildFrame(t, true)).join('');
+}
+
+// ══════════════════════════════════════════
+//  SUPPRESSION
+// ══════════════════════════════════════════
+async function deleteTrade(tradeId) {
+  if (!confirm('Supprimer ce trade et ses images ?')) return;
+  try {
+    await tradesCol().doc(tradeId).delete();
+    await deleteImageDoc(tradeId + '-avant');
+    await deleteImageDoc(tradeId + '-tp1');
+    await deleteImageDoc(tradeId + '-apres');
+    _allTrades = _allTrades.filter(t => t.id !== tradeId);
+    renderTypeFilters();
+    if (currentPair) renderTimeline(currentPair);
+    else { renderGlobalStats(); renderYearlyStats(); }
+  } catch(e) { console.error('deleteTrade error:', e); }
+}
+
+// ══════════════════════════════════════════
+//  PARAMÈTRES (CAPITAL & OBJECTIF)
+// ══════════════════════════════════════════
+function openSettings() {
+  document.getElementById('s-capital').value = _settings.capital !== null ? _settings.capital : '';
+  document.getElementById('s-objectif').value = _settings.objectif !== null ? _settings.objectif : '';
+  document.getElementById('settings-error').classList.remove('show');
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+async function deleteCollection(col) {
+  const snap = await col.get();
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 300) {
+    const batch = fbDB.batch();
+    docs.slice(i, i + 300).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return docs.length;
+}
+
+async function resetJournal() {
+  const n = _allTrades.length;
+  if (!confirm('Supprimer définitivement les ' + n + ' trade' + (n>1?'s':'') + ' et TOUTES les images du journal ?\n\nCette action est irréversible.')) return;
+  const word = prompt('Pour confirmer, tape EFFACER (en majuscules) :');
+  if (word === null || word.trim() !== 'EFFACER') { alert('Réinitialisation annulée.'); return; }
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true; btn.textContent = 'Suppression en cours...';
+  try {
+    await deleteCollection(tradesCol());
+    await deleteCollection(imagesCol());
+    _allTrades = [];
+    Object.keys(_imgCache).forEach(k => delete _imgCache[k]);
+    _typeFilter = 'all'; _oteFilter = 'all';
+    closeSettings();
+    goHome();
+    refreshAllViews();
+  } catch(e) {
+    console.error('resetJournal error:', e);
+    alert('Erreur pendant la suppression — vérifie ta connexion et réessaie.');
+  }
+  btn.disabled = false; btn.textContent = 'Réinitialiser le journal';
+}
+
+async function saveSettings() {
+  const capRaw = document.getElementById('s-capital').value;
+  const objRaw = document.getElementById('s-objectif').value;
+  const cap = capRaw === '' ? null : parseFloat(capRaw);
+  const obj = objRaw === '' ? null : parseFloat(objRaw);
+  const err = document.getElementById('settings-error');
+  if (capRaw !== '' && (isNaN(cap) || cap < 0)) { err.textContent = 'Capital de départ invalide.'; err.classList.add('show'); return; }
+  if (objRaw !== '' && (isNaN(obj) || obj < 0)) { err.textContent = 'Objectif invalide.'; err.classList.add('show'); return; }
+  try {
+    await settingsDoc().set({ capital: cap, objectif: obj }, { merge: true });
+    closeSettings();
+  } catch(e) {
+    console.error('saveSettings error:', e);
+    err.textContent = 'Erreur d\'enregistrement — réessaie.'; err.classList.add('show');
+  }
+}
+
+function fmtMoney(v) {
+  const sign = v < 0 ? '-' : '';
+  return sign + Math.abs(v).toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:2}) + ' $';
+}
+
+function renderPerfPanel() {
+  const el = document.getElementById('perf-panel');
+  if (!el) return;
+  const netTotal = visibleTrades().reduce((s,t) => s + (t.totalPnl || 0), 0);
+  if (_settings.capital === null && !_allTrades.length) { el.innerHTML = ''; return; }
+  const capital = _settings.capital || 0;
+  const current = capital + netTotal;
+  let progressHtml = '';
+  if (_settings.objectif && _settings.objectif > capital) {
+    const pct = Math.max(0, Math.min(100, Math.round((current - capital) / (_settings.objectif - capital) * 100)));
+    progressHtml = '<div class="perf-progress"><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div>'
+      + '<div class="bar-label">' + pct + '% de l\'objectif (' + fmtMoney(_settings.objectif) + ')</div></div>';
+  }
+  el.innerHTML =
+    '<div class="perf-stat"><div class="pl">Capital de départ</div><div class="pv">' + (_settings.capital !== null ? fmtMoney(capital) : '—') + '</div></div>'
+    + '<div class="perf-stat"><div class="pl">Résultat net total</div><div class="pv ' + (netTotal>0?'pos':netTotal<0?'neg':'') + '">' + fmtMoney(netTotal) + '</div></div>'
+    + '<div class="perf-stat"><div class="pl">Capital actuel</div><div class="pv">' + (_settings.capital !== null ? fmtMoney(current) : '—') + '</div></div>'
+    + progressHtml;
+}
+
+// ══════════════════════════════════════════
+//  MODAL — AJOUTER UN TRADE
+// ══════════════════════════════════════════
+let _fileAvant = null, _fileTp1 = null, _fileApres = null;
+
+function buildPairSelect() {
+  const sel = document.getElementById('f-pair');
+  sel.innerHTML = GROUPES.map(g =>
+    '<optgroup label="' + g.label + '">' +
+    g.pairs.map(p => '<option value="' + p.id + '">' + p.label + '</option>').join('') +
+    '</optgroup>'
+  ).join('');
+}
+
+// ══════════════════════════════════════════
+//  CLÔTURES (POSITION & RÉSULTAT)
+// ══════════════════════════════════════════
+let _closeRowSeq = 0;
+
+function closeRowHTML(data) {
+  data = data || {};
+  const id = 'cr' + (++_closeRowSeq);
+  const type = data.type || 'tp1';
+  const amount = data.amount !== undefined && data.amount !== null ? data.amount : '';
+  const rr = data.rr !== undefined && data.rr !== null ? data.rr : '';
+  return '<div class="close-row" data-row-id="' + id + '">'
+    + '<select class="close-type" data-role="type" onchange="recalcCloses()">'
+    + '<option value="tp1"' + (type==='tp1'?' selected':'') + '>TP1</option>'
+    + '<option value="tp2"' + (type==='tp2'?' selected':'') + '>TP Final</option>'
+    + '<option value="be"' + (type==='be'?' selected':'') + '>Breakeven</option>'
+    + '<option value="sl"' + (type==='sl'?' selected':'') + '>Stop Loss</option>'
+    + '</select>'
+    + '<input type="number" class="close-amount" data-role="amount" step="0.01" placeholder="Montant engagé $" value="' + amount + '" oninput="recalcCloses()">'
+    + '<input type="number" class="close-rr" data-role="rr" step="0.1" placeholder="R:R (ex: 2)" value="' + rr + '" oninput="recalcCloses()">'
+    + '<span class="close-pnl" data-role="pnl">—</span>'
+    + '<button type="button" class="close-del" onclick="removeCloseRow(this)" title="Supprimer">🗑</button>'
+    + '</div>';
+}
+
+function addCloseRow(data) {
+  document.getElementById('closes-list').insertAdjacentHTML('beforeend', closeRowHTML(data));
+  recalcCloses();
+}
+
+function removeCloseRow(btn) {
+  btn.closest('.close-row').remove();
+  recalcCloses();
+}
+
+function computeClosePnl(type, amount, rr) {
+  if (amount === null || isNaN(amount)) return null;
+  if (type === 'be') return 0;
+  if (type === 'sl') return -amount;
+  if (rr === null || isNaN(rr)) return null;
+  return amount * rr;
+}
+
+function recalcCloses() {
+  const rows = document.querySelectorAll('#closes-list .close-row');
+  let total = 0;
+  rows.forEach(row => {
+    const type = row.querySelector('[data-role="type"]').value;
+    const amountRaw = row.querySelector('[data-role="amount"]').value;
+    const rrRaw = row.querySelector('[data-role="rr"]').value;
+    const rrInput = row.querySelector('[data-role="rr"]');
+    rrInput.style.visibility = (type === 'be' || type === 'sl') ? 'hidden' : 'visible';
+    const amount = amountRaw === '' ? null : parseFloat(amountRaw);
+    const rr = rrRaw === '' ? null : parseFloat(rrRaw);
+    const pnl = computeClosePnl(type, amount, rr);
+    const pnlEl = row.querySelector('[data-role="pnl"]');
+    pnlEl.className = 'close-pnl' + (pnl > 0 ? ' pos' : pnl < 0 ? ' neg' : '');
+    pnlEl.textContent = pnl === null ? '—' : fmtMoney(pnl);
+    if (pnl !== null) total += pnl;
+  });
+  const totalEl = document.getElementById('closes-total-val');
+  if (totalEl) {
+    totalEl.textContent = fmtMoney(total);
+    totalEl.className = total > 0 ? 'pos' : total < 0 ? 'neg' : '';
+  }
+}
+
+function gatherCloses() {
+  const rows = document.querySelectorAll('#closes-list .close-row');
+  const closes = [];
+  rows.forEach(row => {
+    const type = row.querySelector('[data-role="type"]').value;
+    const amountRaw = row.querySelector('[data-role="amount"]').value;
+    const rrRaw = row.querySelector('[data-role="rr"]').value;
+    if (amountRaw === '') return;
+    const amount = parseFloat(amountRaw);
+    const rr = rrRaw === '' ? null : parseFloat(rrRaw);
+    const pnl = computeClosePnl(type, amount, rr);
+    if (pnl === null) return;
+    closes.push({ type, amount, rr, pnl });
+  });
+  return closes;
+}
+
+function resetClosesForm() {
+  document.getElementById('closes-list').innerHTML = '';
+  addCloseRow();
+}
+
+function openModal(tradeId) {
+  buildPairSelect();
+  _editingTradeId = tradeId || null;
+
+  if (_editingTradeId) {
+    const t = _allTrades.find(x => x.id === _editingTradeId);
+    if (!t) { _editingTradeId = null; }
+    else {
+      document.getElementById('modal-title').textContent = 'Modifier le trade';
+      document.getElementById('f-pair').value = t.pairId;
+      document.getElementById('f-date-ouverture').value = t.dateISO || '';
+      document.getElementById('f-date-tp1').value = t.dateTP1 || '';
+      document.getElementById('f-date-be').value = t.dateBE || '';
+      document.getElementById('f-date-sl').value = t.dateSL || '';
+      document.getElementById('f-date-tp2').value = t.dateTP2 || '';
+      document.getElementById('f-session').value = t.session || '';
+      setFormType(t.tradeType);
+      setFormOte(t.oteType);
+      document.getElementById('f-comment').value = t.comment || '';
+      document.getElementById('closes-list').innerHTML = '';
+      if (t.closes && t.closes.length) {
+        t.closes.forEach(c => addCloseRow(c));
+      } else {
+        addCloseRow();
+      }
+      ['avant','tp1','apres'].forEach(which => {
+        const url = _imgCache[t.id + '-' + which];
+        if (url) {
+          document.getElementById('preview-' + which).src = url;
+          document.getElementById('box-' + which).classList.add('filled');
+        }
+      });
+      document.getElementById('modal-overlay').classList.add('open');
+      return;
+    }
+  }
+
+  document.getElementById('modal-title').textContent = 'Ajouter un trade';
+  if (currentPair) document.getElementById('f-pair').value = currentPair;
+  setFormType(_typeFilter === 'all' ? null : _typeFilter);
+  setFormOte(_oteFilter === 'all' ? null : _oteFilter);
+  resetClosesForm();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  resetForm();
+}
+
+function resetForm() {
+  _fileAvant = null; _fileTp1 = null; _fileApres = null;
+  _editingTradeId = null;
+  document.getElementById('modal-title').textContent = 'Ajouter un trade';
+  document.getElementById('f-avant').value = '';
+  document.getElementById('f-tp1').value = '';
+  document.getElementById('f-apres').value = '';
+  document.getElementById('f-date-ouverture').value = '';
+  document.getElementById('f-date-tp1').value = '';
+  document.getElementById('f-date-be').value = '';
+  document.getElementById('f-date-sl').value = '';
+  document.getElementById('f-date-tp2').value = '';
+  document.getElementById('f-session').value = '';
+  setFormType(null);
+  setFormOte(null);
+  document.getElementById('f-comment').value = '';
+  resetClosesForm();
+  document.getElementById('box-avant').classList.remove('filled');
+  document.getElementById('box-tp1').classList.remove('filled');
+  document.getElementById('box-apres').classList.remove('filled');
+  document.getElementById('preview-avant').src = '';
+  document.getElementById('preview-tp1').src = '';
+  document.getElementById('preview-apres').src = '';
+  showFormError('');
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = false; btn.textContent = 'Enregistrer le trade';
+}
+
+function setFormType(val) {
+  document.querySelectorAll('input[name="f-type"]').forEach(r => { r.checked = (r.value === val); });
+}
+
+function setFormOte(val) {
+  document.querySelectorAll('input[name="f-ote"]').forEach(r => { r.checked = (r.value === val); });
+}
+
+function getFormOte() {
+  const r = document.querySelector('input[name="f-ote"]:checked');
+  return r ? r.value : '';
+}
+
+function getFormType() {
+  const r = document.querySelector('input[name="f-type"]:checked');
+  return r ? r.value : '';
+}
+
+function showFormError(msg) {
+  const el = document.getElementById('form-error');
+  if (!msg) { el.classList.remove('show'); el.textContent = ''; return; }
+  el.textContent = msg; el.classList.add('show');
+}
+
+function previewFile(which, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (which === 'avant') _fileAvant = file;
+  else if (which === 'tp1') _fileTp1 = file;
+  else _fileApres = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-' + which).src = e.target.result;
+    document.getElementById('box-' + which).classList.add('filled');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function compressImage(file, maxW=1400, q=0.82) {
+  return new Promise(res => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(c.toDataURL('image/jpeg', q));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function submitTrade() {
+  const pairId = document.getElementById('f-pair').value;
+  const dateISO = document.getElementById('f-date-ouverture').value;
+  const dateTP1 = document.getElementById('f-date-tp1').value;
+  const dateBE  = document.getElementById('f-date-be').value;
+  const dateSL  = document.getElementById('f-date-sl').value;
+  const dateTP2 = document.getElementById('f-date-tp2').value;
+  const session = document.getElementById('f-session').value;
+  const tradeType = getFormType();
+  const oteType = getFormOte();
+  const comment = document.getElementById('f-comment').value.trim();
+  const isEditing = !!_editingTradeId;
+
+  if (!pairId) return showFormError('Sélectionne une paire de devises.');
+  if (!tradeType) return showFormError('Sélectionne le type de trade : Backtest ou Trade pris réellement.');
+  if (!oteType) return showFormError('Sélectionne la catégorie OTE : avec ou sans confirmation.');
+  if (!isEditing && !_fileAvant) return showFormError('Ajoute l\'image avant l\'entrée.');
+  if (!dateISO) return showFormError('Renseigne la date d\'ouverture.');
+  if (!session) return showFormError('Sélectionne la session de trading.');
+  if (dateTP1 && dateTP1 < dateISO) return showFormError('La date TP1 ne peut pas précéder la date d\'ouverture.');
+  if (dateBE  && dateBE  < dateISO) return showFormError('La date BE ne peut pas précéder la date d\'ouverture.');
+  if (dateSL  && dateSL  < dateISO) return showFormError('La date SL ne peut pas précéder la date d\'ouverture.');
+  if (dateTP2 && dateTP2 < dateISO) return showFormError('La date TP final ne peut pas précéder la date d\'ouverture.');
+  showFormError('');
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  try {
+    const tradeId = isEditing ? _editingTradeId : tradesCol().doc().id;
+    const pairLabel = PAIR_MAP[pairId].label;
+    const closes = gatherCloses();
+    const totalPnl = closes.reduce((s,c) => s + c.pnl, 0);
+
+    const imgSaves = [];
+    if (_fileAvant) imgSaves.push(compressImage(_fileAvant).then(b64 => saveImageDoc(tradeId + '-avant', b64)));
+    if (_fileTp1)   imgSaves.push(compressImage(_fileTp1).then(b64 => saveImageDoc(tradeId + '-tp1', b64)));
+    if (_fileApres) imgSaves.push(compressImage(_fileApres).then(b64 => saveImageDoc(tradeId + '-apres', b64)));
+
+    const tradeData = {
+      pairId, pairLabel, dateISO,
+      dateTP1: dateTP1 || null,
+      dateBE: dateBE || null,
+      dateSL: dateSL || null,
+      dateTP2: dateTP2 || null,
+      session,
+      tradeType,
+      oteType,
+      comment: comment || null,
+      closes,
+      totalPnl,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!isEditing) tradeData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+    await Promise.all([
+      ...imgSaves,
+      tradesCol().doc(tradeId).set(tradeData, { merge: true })
+    ]);
+
+    closeModal();
+    selectPair(pairId);
+  } catch(e) {
+    console.error('submitTrade error:', e);
+    btn.disabled = false; btn.textContent = 'Enregistrer le trade';
+    showFormError('Erreur d\'enregistrement — vérifie ta connexion et réessaie.');
+  }
+}
+
+// ══════════════════════════════════════════
+//  LIGHTBOX
+// ══════════════════════════════════════════
+function lbOpen(src) {
+  if (!src || src === BLANK) return;
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function lbClose() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') lbClose(); });
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderGroups();
+  renderGlobalStats();
+  renderYearlyStats();
+  renderCalendar();
+  renderPerfPanel();
+  listenTrades();
+  listenImages();
+  listenSettings();
+});
+</script>
+</body>
+</html>
